@@ -13,7 +13,7 @@
   const frameScript = String.raw`(() => {
     "use strict";
 
-    const MESSAGE = "FuzikGit:GlanceLeftClick:OpenGlance";
+    const MESSAGE = "FuzikGit:GlanceLeftClick:OpenGlance:Frame";
 
     if (globalThis.__fuzikGlanceLeftClickFrame) {
       return;
