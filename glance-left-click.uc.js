@@ -13,6 +13,7 @@
 
       win.addEventListener("click", (event) => {
         // Alt+click pozostaje natywnym sposobem otwierania Glance.
+        // BUILD: 2026-10-28-02
         if (
           event.button !== 0 ||
           event.altKey ||
