@@ -1,19 +1,18 @@
+
 (() => {
   "use strict";
 
-  const installedWindows = new WeakSet();
+  const installedDocuments = new WeakSet();
 
   function attachToBrowser(browser) {
-    let win;
-
     try {
-      win = browser.contentWindow;
-      if (!win || installedWindows.has(win)) return;
-      installedWindows.add(win);
+      const win = browser.contentWindow;
+      const doc = win?.document;
 
-      win.addEventListener("click", (event) => {
-        // Alt+click pozostaje natywnym sposobem otwierania Glance.
-        // BUILD: 2026-10-28-02
+      if (!doc || installedDocuments.has(doc)) return;
+      installedDocuments.add(doc);
+
+      doc.addEventListener("click", (event) => {
         if (
           event.button !== 0 ||
           event.altKey ||
@@ -25,33 +24,27 @@
           return;
         }
 
-        const path = event.composedPath();
-        const link = path.find(
-          node => node instanceof win.Element &&
+        const anchor = event.composedPath().find(
+          node => node?.nodeType === 1 &&
             node.localName === "a" &&
             node.href
         );
 
-        if (!link || link.hasAttribute("download")) return;
+        if (!anchor || anchor.hasAttribute("download")) return;
 
-        const url = link.href;
-        if (!/^https?:/i.test(url)) return;
-
-        // Nie przechwytuj kliknięć w linki otwierane
-        // jawnie w nowym kontekście.
         if (
-          link.target &&
-          link.target.toLowerCase() !== "_self"
+          anchor.target &&
+          anchor.target.toLowerCase() !== "_self"
         ) {
           return;
         }
 
+        if (!/^https?:/i.test(anchor.href)) return;
+
         event.preventDefault();
         event.stopImmediatePropagation();
 
-        // Przekaż kliknięcie z modyfikatorem Alt.
-        // Zen powinien obsłużyć je swoim natywnym Glance.
-        link.dispatchEvent(
+        anchor.dispatchEvent(
           new win.MouseEvent("click", {
             bubbles: true,
             cancelable: true,
@@ -74,6 +67,7 @@
   }
 
   gBrowser.addEventListener("load", attachAll, true);
+
   gBrowser.tabContainer.addEventListener("TabOpen", () => {
     attachAll();
   });
