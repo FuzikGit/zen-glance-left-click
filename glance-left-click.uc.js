@@ -1,26 +1,54 @@
-
 (() => {
   "use strict";
 
-  const BUILD = "0.1.4";
-  const MESSAGE = "FuzikGit:GlanceLeftClick:OpenGlance";
-  const FRAME_MESSAGE = MESSAGE + ":Frame";
+  const BUILD = "0.1.6";
+  const PREFIX = "FuzikGit:GlanceLeftClick";
+  const OPEN_MESSAGE = `${PREFIX}:OpenGlance:Frame`;
+  const DEBUG_MESSAGE = `${PREFIX}:Debug`;
 
-  if (window.__glanceLeftClickBuild === BUILD) {
-    return;
-  }
+  if (window.__glanceLeftClickBuild === BUILD) return;
 
-  const frameScript = String.raw`(() => {
+  const frameScript = String.raw`
+  (() => {
     "use strict";
 
-    const MESSAGE = "FuzikGit:GlanceLeftClick:OpenGlance:Frame";
+    const PREFIX = "FuzikGit:GlanceLeftClick";
+    const OPEN_MESSAGE = PREFIX + ":OpenGlance:Frame";
+    const DEBUG_MESSAGE = PREFIX + ":Debug";
 
-    if (globalThis.__fuzikGlanceLeftClickFrame) {
-      return;
+    function report(data) {
+      try {
+        sendAsyncMessage(DEBUG_MESSAGE, {
+          ...data,
+          page: location.href
+        });
+      } catch (_) {}
     }
-    globalThis.__fuzikGlanceLeftClickFrame = true;
+
+    report({ stage: "frame-script-loaded" });
 
     addEventListener("click", event => {
+      const path = event.composedPath();
+
+      const link = path.find(node =>
+        node &&
+        node.nodeType === 1 &&
+        (node.localName === "a" || node.localName === "area") &&
+        (node.href || node.getAttribute("href"))
+      );
+
+      report({
+        stage: "click-captured",
+        trusted: event.isTrusted,
+        button: event.button,
+        alt: event.altKey,
+        ctrl: event.ctrlKey,
+        shift: event.shiftKey,
+        meta: event.metaKey,
+        prevented: event.defaultPrevented,
+        link: link?.href || null
+      });
+
       if (
         !event.isTrusted ||
         event.button !== 0 ||
@@ -33,14 +61,12 @@
         return;
       }
 
-      const link = event.composedPath().find(node =>
-        node &&
-        node.nodeType === 1 &&
-        (node.localName === "a" || node.localName === "area") &&
-        (node.href || node.getAttribute("href"))
-      );
+      if (!link || link.hasAttribute("download")) return;
 
-      if (!link || link.hasAttribute("download")) {
+      if (
+        link.target &&
+        link.target.toLowerCase() !== "_self"
+      ) {
         return;
       }
 
@@ -51,26 +77,25 @@
           link.getAttribute("data-url") ||
           link.href ||
           link.getAttribute("href"),
-          link.ownerDocument.location.href
+          location.href
         ).href;
       } catch (_) {
+        report({ stage: "invalid-url" });
         return;
       }
 
-      if (!/^https?:\/\//i.test(url)) {
-        return;
-      }
+      if (!/^https?:\/\//i.test(url)) return;
 
       const rect = link.getBoundingClientRect();
       const zoom =
         globalThis.docShell?.browsingContext?.fullZoom || 1;
 
-      // Blokujemy zwykłą nawigację w bieżącej karcie.
       event.preventDefault();
-      event.stopPropagation();
       event.stopImmediatePropagation();
 
-      sendAsyncMessage(MESSAGE, {
+      report({ stage: "sending-open-request", url });
+
+      sendAsyncMessage(OPEN_MESSAGE, {
         url,
         clientX: rect.left * zoom,
         clientY: rect.top * zoom,
@@ -78,18 +103,17 @@
         height: rect.height * zoom
       });
     }, true);
-  })();`;
+  })();
+  `;
 
-  const frameScriptURL =
+  const scriptURL =
     "data:application/javascript;charset=UTF-8," +
     encodeURIComponent(frameScript);
 
-  const attachedBrowsers = new WeakSet();
+  const attached = new WeakSet();
 
   function attachBrowser(browser) {
-    if (!browser || attachedBrowsers.has(browser)) {
-      return;
-    }
+    if (!browser || attached.has(browser)) return;
 
     const mm = browser.messageManager;
 
@@ -98,106 +122,95 @@
       typeof mm.loadFrameScript !== "function" ||
       typeof mm.addMessageListener !== "function"
     ) {
-      console.error(
-        "[Glance Left Click] Frame-script API niedostępne."
-      );
+      console.error("[Glance Left Click] Frame-script API unavailable");
       return;
     }
 
     const listener = {
       receiveMessage(message) {
+        const data = message.data || {};
+
+        if (message.name === DEBUG_MESSAGE) {
+          console.info("[Glance Left Click DEBUG]", data);
+          return;
+        }
+
+        if (message.name !== OPEN_MESSAGE) return;
+
+        console.info("[Glance Left Click DEBUG] Open request received", data);
+
         try {
-          const data = message.data;
-
-          if (
-            !data ||
-            typeof data.url !== "string" ||
-            !/^https?:\/\//i.test(data.url)
-          ) {
-            return;
-          }
-
           const win = browser.ownerGlobal || window;
           const manager = win.gZenGlanceManager;
+          const principal = browser.contentPrincipal;
 
-          if (
-            !manager ||
-            typeof manager.openGlance !== "function"
-          ) {
+          if (!manager || typeof manager.openGlance !== "function") {
             console.error(
-              "[Glance Left Click] Nie znaleziono gZenGlanceManager."
+              "[Glance Left Click DEBUG] gZenGlanceManager.openGlance unavailable"
             );
             return;
           }
-
-          const principal = browser.contentPrincipal;
 
           if (!principal) {
             console.error(
-              "[Glance Left Click] Nie znaleziono principal strony."
+              "[Glance Left Click DEBUG] No content principal"
             );
             return;
           }
 
-          const tab =
-            win.gBrowser.getTabForBrowser(browser) ||
-            win.gBrowser.selectedTab;
+          const result = manager.openGlance({
+            url: data.url,
+            triggeringPrincipal: principal,
+            clientX: data.clientX,
+            clientY: data.clientY,
+            width: data.width,
+            height: data.height
+          });
 
-          const result = manager.openGlance(
-            {
-              url: data.url,
-              triggeringPrincipal: principal,
-              clientX: data.clientX,
-              clientY: data.clientY,
-              width: data.width,
-              height: data.height
-            },
-            null,
-            tab
-          );
-
-          Promise.resolve(result).catch(error => {
+          Promise.resolve(result).then(value => {
+            console.info(
+              "[Glance Left Click DEBUG] openGlance result:",
+              value ? "returned a value" : "returned null"
+            );
+          }).catch(error => {
             console.error(
-              "[Glance Left Click] Błąd otwierania podglądu:",
+              "[Glance Left Click DEBUG] openGlance rejected:",
               error
             );
           });
         } catch (error) {
-          console.error("[Glance Left Click]", error);
+          console.error("[Glance Left Click DEBUG] Open failed:", error);
         }
       }
     };
 
     try {
-      mm.addMessageListener(FRAME_MESSAGE, listener);
-      mm.loadFrameScript(frameScriptURL, true);
-      attachedBrowsers.add(browser);
+      mm.addMessageListener(DEBUG_MESSAGE, listener);
+      mm.addMessageListener(OPEN_MESSAGE, listener);
+      mm.loadFrameScript(scriptURL, true);
+      attached.add(browser);
 
-      console.info(
-        "[Glance Left Click] Mod 0.1.4 uruchomiony."
-      );
+      console.info("[Glance Left Click] Mod 0.1.6 attached");
     } catch (error) {
-      mm.removeMessageListener(FRAME_MESSAGE, listener);
-      console.error(
-        "[Glance Left Click] Nie udało się załadować skryptu:",
-        error
-      );
+      mm.removeMessageListener(DEBUG_MESSAGE, listener);
+      mm.removeMessageListener(OPEN_MESSAGE, listener);
+      console.error("[Glance Left Click] Attachment failed:", error);
     }
   }
 
-  // Zainstaluj obsługę we wszystkich istniejących kartach.
-  for (const browser of gBrowser.browsers) {
-    attachBrowser(browser);
+  function attachAll() {
+    for (const browser of gBrowser.browsers) {
+      attachBrowser(browser);
+    }
   }
 
-  // Obsłuż także karty tworzone później.
+  gBrowser.addEventListener("load", attachAll, true);
+
   gBrowser.tabContainer.addEventListener("TabOpen", event => {
     const browser = event.target.linkedBrowser;
-
-    window.setTimeout(() => {
-      attachBrowser(browser);
-    }, 0);
+    window.setTimeout(() => attachBrowser(browser), 0);
   });
 
+  attachAll();
   window.__glanceLeftClickBuild = BUILD;
 })();
