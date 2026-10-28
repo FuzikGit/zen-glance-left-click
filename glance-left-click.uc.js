@@ -2,7 +2,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "0.1.9";
+  const BUILD = "0.1.10";
   const PREFIX = "FuzikGit:GlanceLeftClick";
   const OPEN_MESSAGE = PREFIX + ":OpenGlance";
   const DEBUG_MESSAGE = PREFIX + ":Debug";
@@ -36,10 +36,7 @@
     report("any-click", {
       trusted: event.isTrusted,
       button: event.button,
-      target: event.target?.tagName || event.target?.nodeName,
-      path: event.composedPath().slice(0, 10).map(node =>
-        node?.tagName || node?.nodeName || typeof node
-      )
+      target: event.target?.tagName || event.target?.nodeName
     });
       const link = event.composedPath().find(node =>
         node &&
