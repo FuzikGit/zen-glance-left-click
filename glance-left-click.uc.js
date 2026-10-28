@@ -33,6 +33,14 @@
     }
 
     function handleClick(event) {
+    report("any-click", {
+      trusted: event.isTrusted,
+      button: event.button,
+      target: event.target?.tagName || event.target?.nodeName,
+      path: event.composedPath().slice(0, 10).map(node =>
+        node?.tagName || node?.nodeName || typeof node
+      )
+    });
       const link = event.composedPath().find(node =>
         node &&
         node.nodeType === 1 &&
