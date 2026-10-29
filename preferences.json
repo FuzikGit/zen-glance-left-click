@@ -1,0 +1,14 @@
+[
+  {
+    "property": "glance-left-click.open_glance_on_left_click",
+    "label": "Otwieraj linki w Glance po kliknięciu LPM",
+    "type": "checkbox",
+    "defaultValue": true
+  },
+  {
+    "property": "glance-left-click.show_hover_menu",
+    "label": "Pokaż menu akcji po najechaniu na link",
+    "type": "checkbox",
+    "defaultValue": true
+  }
+]

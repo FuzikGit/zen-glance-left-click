@@ -1,19 +1,16 @@
-
 # Glance Left Click
 
-A Sine mod for Zen Browser.
+Sine mod for Zen Browser that lets you choose how link actions work.
 
-## Goal
+## Settings
 
-Open links in Zen's native Glance preview with a normal left click.
+Open the mod's settings in Zen/Sine to choose either or both options:
 
-## Target version
+- **Otwieraj linki w Glance po kliknięciu LPM** — a normal left-click opens the link in Zen's native Glance preview. When disabled, normal link navigation is restored.
+- **Pokaż menu akcji po najechaniu na link** — shows a small action panel with Open in Glance, Copy link and Add to Split.
 
-Zen Browser 1.23.4b
+Both settings are enabled by default. Changes should take effect without editing the script.
 
-## Installation
+## Install
 
-1. Install Sine in Zen Browser.
-2. Enable JavaScript mods from unofficial sources.
-3. Install this repository through Sine.
-4. Restart Zen Browser.
+Install the repository through Sine. If updating manually, keep these files in the repository root: `theme.json`, `preferences.json`, `glance-left-click.uc.js`, and `README.md`.

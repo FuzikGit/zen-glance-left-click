@@ -1,17 +1,27 @@
 {
   "id": "glance-left-click",
   "name": "Glance Left Click",
-  "description": "Open links in Zen Glance with a left click.",
+  "description": "Open links in Glance with left click and optionally show hover actions for Glance, copy URL and Split View.",
   "scripts": {
     "glance-left-click.uc.js": {
-      "include": ["chrome://browser/content/browser.xhtml"]
+      "include": [
+        "chrome://browser/content/browser.xhtml"
+      ]
     }
   },
+  "preferences": "preferences.json",
   "readme": "README.md",
   "author": "FuzikGit",
-  "version": "0.1.11",
-  "tags": ["Zen Browser", "Glance", "Navigation"],
-  "createdAt": "2026-10-28",
-  "updatedAt": "2026-10-28",
-  "fork": ["zen"]
+  "version": "0.3.0",
+  "tags": [
+    "Zen Browser",
+    "Glance",
+    "Split View",
+    "Navigation"
+  ],
+  "createdAt": "2026-10-29",
+  "updatedAt": "2026-10-29",
+  "fork": [
+    "zen"
+  ]
 }
